@@ -6,5 +6,6 @@ namespace UrlShortener.Application.Interfaces
     {
         Task<ShortUrl?> GetByCodeAsync(string code);
         Task AddAsync(ShortUrl url);
+        Task UpdateAsync(ShortUrl url);
     }
 }

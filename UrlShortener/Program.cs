@@ -1,8 +1,10 @@
 ﻿
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using System.Threading.RateLimiting;
 using UrlShortener.Application.Interfaces;
+using UrlShortener.Application.IRepositories;
 using UrlShortener.Application.Services;
 using UrlShortener.Infrastructure.Data;
 using UrlShortener.Infrastructure.Repositories;
@@ -33,9 +35,17 @@ namespace UrlShortener
                 logging.ResponseHeaders.Add("Content-Type");
             });
 
+            //Cấu hìh redis
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+                return ConnectionMultiplexer.Connect(configuration);
+            });
+
             //Regiter services
             builder.Services.AddScoped<UrlService>();
             builder.Services.AddScoped<IUrlRepository, UrlRepository>();
+            builder.Services.AddScoped<ICacheRepository, CacheRepository>();
 
             //cấu hình db
             builder.Services.AddDbContext<AppDbContext>(options =>
@@ -53,6 +63,8 @@ namespace UrlShortener
                     limiterOptions.QueueLimit = 0; // Không hàng đợi, vượt quá lỗi luôn
                 });
             });
+
+       
 
 
             var app = builder.Build();

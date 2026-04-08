@@ -9,6 +9,7 @@ namespace UrlShortener.Application.DTOs.req
     public class CreateUrlReq
     {
         public string OriginalUrl { get; set; } = string.Empty;
+        public string Ip { get; set; } = string.Empty;
     }
 
 }

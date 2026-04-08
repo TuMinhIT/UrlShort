@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace UrlShortener.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class updateED : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,11 +15,13 @@ namespace UrlShortener.Infrastructure.Migrations
                 name: "ShortUrls",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ShortCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     OriginalUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Ip = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CountClick = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {

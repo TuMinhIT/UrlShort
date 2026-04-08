@@ -1,5 +1,4 @@
 ﻿
-
 using Microsoft.EntityFrameworkCore;
 using UrlShortener.Application.Interfaces;
 using UrlShortener.Domain.Entities;
@@ -36,6 +35,27 @@ namespace UrlShortener.Infrastructure.Repositories
         {
             return await _context.ShortUrls
                 .FirstOrDefaultAsync(x => x.ShortCode == code);
+        }
+
+
+        public async Task UpdateAsync(ShortUrl url)
+        {
+            try
+            {
+                var entity = await _context.ShortUrls.FindAsync(url.Id);
+                if (entity != null)
+                {
+                    // Cách 1: Gắn đè giá trị mới lên Entity cũ đã được track
+                    _context.Entry(entity).CurrentValues.SetValues(url);
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error update URL: {ex.Message}");
+                throw;
+            }
         }
     }
 }

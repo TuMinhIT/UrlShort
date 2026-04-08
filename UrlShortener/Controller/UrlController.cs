@@ -12,7 +12,6 @@ namespace UrlShortener.Controller
         private readonly UrlService _urlService;
         private readonly ILogger<UrlController> _logger;
 
-        // Tiêm IUrlService (logic xử lý) thay vì IUrlRepository (truy cập dữ liệu)
         public UrlController(UrlService urlService, ILogger<UrlController> logger)
         {
             _urlService = urlService;
@@ -26,14 +25,14 @@ namespace UrlShortener.Controller
             try
             {
                 // Gọi Service thực thi logic nghiệp vụ và lấy mã trả về
-                var shortCode = await _urlService.CreateShortCodeAsync(request.OriginalUrl);
+                var shortCode = await _urlService.CreateShortCodeAsync(request.OriginalUrl, request.Ip);
 
-                // Tầng API chỉ lo việc Build Request URI, không để Service phải biết Host là gì
+                // Tầng API chỉ lo việc Build Request URI
                 var shortUrlStr = $"{Request.Scheme}://{Request.Host}/{shortCode}";
 
                 return Ok(new { ShortUrl = shortUrlStr, OriginalUrl = request.OriginalUrl });
             }
-            catch (ArgumentException ex) // Bắt lỗi nghiệp vụ từ Service quăng ra
+            catch (ArgumentException ex) 
             {
                 return BadRequest(ex.Message);
             }
