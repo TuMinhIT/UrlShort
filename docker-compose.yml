@@ -25,7 +25,7 @@
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       # Ghi đè connection string thay vì đọc từ appsettings.json. Server=sqlserver chính là tên service ở trên
-      # - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=UrlShortDb;User Id=sa;Password=YourStrong@Pass123;TrustServerCertificate=True;MultipleActiveResultSets=true
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=UrlShortDb;User Id=sa;Password=YourStrong@Pass123;TrustServerCertificate=True;MultipleActiveResultSets=true
 
 volumes:
   sql_data:

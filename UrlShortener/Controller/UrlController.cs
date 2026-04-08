@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using UrlShortener.Application.Interfaces;
-using UrlShortener.Domain.Entities;
+using UrlShortener.Application.DTOs.req;
+using UrlShortener.Application.Services;
 
 namespace UrlShortener.Controller
 {
@@ -9,69 +9,57 @@ namespace UrlShortener.Controller
     [ApiController]
     public class UrlController : ControllerBase
     {
-        private readonly IUrlRepository _urlRepository;
+        private readonly UrlService _urlService;
         private readonly ILogger<UrlController> _logger;
 
-        public UrlController(IUrlRepository urlRepository, ILogger<UrlController> logger)
+        // Tiêm IUrlService (logic xử lý) thay vì IUrlRepository (truy cập dữ liệu)
+        public UrlController(UrlService urlService, ILogger<UrlController> logger)
         {
-            _urlRepository = urlRepository;
+            _urlService = urlService;
             _logger = logger;
         }
-        
 
-        // Endpoint tạo URL: Bật Rate Limit lên endpoint này (ví dụ: bị gọi nhiều để spam)
         [HttpPost("shorten")]
         [EnableRateLimiting("fixed-limiter")]
-        public async Task<IActionResult> CreateShortUrl([FromBody] CreateUrlRequest request)
+        public async Task<IActionResult> CreateShortUrl([FromBody] CreateUrlReq request)
         {
-            if (string.IsNullOrWhiteSpace(request.OriginalUrl) || !Uri.TryCreate(request.OriginalUrl, UriKind.Absolute, out _))
+            try
             {
-                return BadRequest("URL không hợp lệ.");
+                // Gọi Service thực thi logic nghiệp vụ và lấy mã trả về
+                var shortCode = await _urlService.CreateShortCodeAsync(request.OriginalUrl);
+
+                // Tầng API chỉ lo việc Build Request URI, không để Service phải biết Host là gì
+                var shortUrlStr = $"{Request.Scheme}://{Request.Host}/{shortCode}";
+
+                return Ok(new { ShortUrl = shortUrlStr, OriginalUrl = request.OriginalUrl });
             }
-
-            return Ok();
-
-          // TODO: Ở đây bạn thường có một IUrlShortenerService để tạo chuỗi ShortCode ngẫu nhiên. 
-          // Ở đây mình ví dụ logic tạo ngắn gọn:
-          var shortCode = Guid.NewGuid().ToString().Substring(0, 6);
-
-            // Giả sử ShortUrl là model được dùng cho IUrlRepository
-            var newUrl = new ShortUrl
+            catch (ArgumentException ex) // Bắt lỗi nghiệp vụ từ Service quăng ra
             {
-                OriginalUrl = request.OriginalUrl,
-                ShortCode = shortCode,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _urlRepository.AddAsync(newUrl);
-
-            // Tùy chỉnh base URL dựa trên Host thực tế của bạn
-            var shortUrlStr = $"{Request.Scheme}://{Request.Host}/{shortCode}";
-
-            return Ok(new { ShortUrl = shortUrlStr, OriginalUrl = request.OriginalUrl });
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Đã xảy ra lỗi hệ thống khi tạo URL rút gọn.");
+                return StatusCode(500, "Lỗi máy chủ nội bộ.");
+            }
         }
 
-        // Endpoint Redirect khi người dùng gõ chuỗi short code vào trình duyệt
         [HttpGet("/{code}")]
         public async Task<IActionResult> RedirectToOriginalUrl(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
-                return BadRequest("Code cannot be empty");
+                return BadRequest("Mã URL không được bỏ trống.");
 
-            var urlEntity = await _urlRepository.GetByCodeAsync(code);
+            var originalUrl = await _urlService.GetOriginalUrlAsync(code);
 
-            if (urlEntity == null)
+            if (originalUrl == null)
             {
-                return NotFound("Url không tồn tại.");
+                return NotFound("URL không tồn tại.");
             }
 
-            // Chuyển hướng người dùng vĩnh viễn (301) đến URL thực tế
-            return RedirectPermanent(urlEntity.OriginalUrl);
+            return RedirectPermanent(originalUrl);
         }
     }
 
-    public class CreateUrlRequest
-    {
-        public string OriginalUrl { get; set; } = string.Empty;
-    }
+ 
 }

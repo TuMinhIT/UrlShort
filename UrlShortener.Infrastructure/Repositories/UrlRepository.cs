@@ -18,8 +18,18 @@ namespace UrlShortener.Infrastructure.Repositories
 
         public async Task AddAsync(ShortUrl url)
         {
-            await _context.ShortUrls.AddAsync(url);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.ShortUrls.AddAsync(url);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework like Serilog, NLog, etc.)
+                Console.WriteLine($"Error adding URL: {ex.Message}");
+                throw; // Re-throw the exception after logging
+            }
+           
         }
 
         public async Task<ShortUrl?> GetByCodeAsync(string code)

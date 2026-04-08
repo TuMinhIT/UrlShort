@@ -11,7 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\" />
     <Folder Include="Exceptions\" />
     <Folder Include="Mappings\" />
     <Folder Include="Validators\" />

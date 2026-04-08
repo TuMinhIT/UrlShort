@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using UrlShortener.Application.Interfaces;
+using UrlShortener.Application.Services;
 using UrlShortener.Infrastructure.Data;
 using UrlShortener.Infrastructure.Repositories;
+
 
 namespace UrlShortener
 {
@@ -32,6 +34,7 @@ namespace UrlShortener
             });
 
             //Regiter services
+            builder.Services.AddScoped<UrlService>();
             builder.Services.AddScoped<IUrlRepository, UrlRepository>();
 
             //cấu hình db
