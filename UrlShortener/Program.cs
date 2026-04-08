@@ -1,3 +1,10 @@
+﻿
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
+using UrlShortener.Application.Interfaces;
+using UrlShortener.Infrastructure.Data;
+using UrlShortener.Infrastructure.Repositories;
 
 namespace UrlShortener
 {
@@ -14,6 +21,37 @@ namespace UrlShortener
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // Cấu hình Controllers
+            builder.Services.AddControllers();
+
+            //  Thêm HTTP Logging để log mọi request/response
+            builder.Services.AddHttpLogging(logging =>
+            {
+                logging.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.All;
+                logging.ResponseHeaders.Add("Content-Type");
+            });
+
+            //Regiter services
+            builder.Services.AddScoped<IUrlRepository, UrlRepository>();
+
+            //cấu hình db
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                options.AddFixedWindowLimiter("fixed-limiter", limiterOptions =>
+                {
+                    limiterOptions.PermitLimit = 10; // Tối đa 10 request
+                    limiterOptions.Window = TimeSpan.FromMinutes(1); // Trong khoảng 1 phút
+                    limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    limiterOptions.QueueLimit = 0; // Không hàng đợi, vượt quá lỗi luôn
+                });
+            });
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -23,31 +61,20 @@ namespace UrlShortener
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            // app.UseHttpsRedirection();
+            
+            // Middleware log HTTP request/response
+            app.UseHttpLogging();
+            
+            // Sử dụng Rate Limiting Middleware trước Routing và Endpoints
+            app.UseRateLimiter();
 
             app.UseAuthorization();
-
-            var summaries = new[]
-            {
-                "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-            };
-
-            app.MapGet("/weatherforecast", (HttpContext httpContext) =>
-            {
-                var forecast = Enumerable.Range(1, 5).Select(index =>
-                    new WeatherForecast
-                    {
-                        Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                        TemperatureC = Random.Shared.Next(-20, 55),
-                        Summary = summaries[Random.Shared.Next(summaries.Length)]
-                    })
-                    .ToArray();
-                return forecast;
-            })
-            .WithName("GetWeatherForecast")
-            .WithOpenApi();
-
-            app.Run();
+            
+            //  QUAN TRỌNG: Map controllers để route hoạt động
+            app.MapControllers();
+            app.MapGet("/", () => "🚀 API is running...");           
+            app.Run();           
         }
     }
 }

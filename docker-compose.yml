@@ -1,17 +1,31 @@
-version: "3.8"
-
-services:
+﻿services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: urlshortener-sql
     restart: always
     environment:
-      SA_PASSWORD: "SECRET_KEY"
+      SA_PASSWORD: "YourStrong@Pass123"
       ACCEPT_EULA: "Y"
     ports:
-      - "1433:1433"
+      # Máy host (máy bạn) truy cập qua 1434.
+      # Nhưng các container khác gọi sang sẽ gọi qua 1433.
+      - "1434:1433"
     volumes:
       - sql_data:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: urlshortener-api
+    ports:
+      - "5000:8080" # Map cổng 5000 trên máy tính vào cổng 8080 của .NET 8
+    volumes:
+      - .:/app # 🔥 Mount toàn bộ
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Ghi đè connection string thay vì đọc từ appsettings.json. Server=sqlserver chính là tên service ở trên
+      # - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=UrlShortDb;User Id=sa;Password=YourStrong@Pass123;TrustServerCertificate=True;MultipleActiveResultSets=true
 
 volumes:
   sql_data:

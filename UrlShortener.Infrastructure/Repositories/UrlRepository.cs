@@ -1,5 +1,10 @@
 ﻿
 
+using Microsoft.EntityFrameworkCore;
+using UrlShortener.Application.Interfaces;
+using UrlShortener.Domain.Entities;
+using UrlShortener.Infrastructure.Data;
+
 namespace UrlShortener.Infrastructure.Repositories
 {
     public class UrlRepository : IUrlRepository
