@@ -1,0 +1,17 @@
+﻿Application
+│
+├── Interfaces        ← abstraction (quan trọng)
+│    └── IUrlRepository.cs
+│
+├── Services          ← business logic (cách đơn giản)
+│    └── UrlService.cs
+│
+├── DTOs              ← data trả về API
+│    └── CreateUrlRequest.cs
+│    └── UrlResponse.cs
+│
+├── Validators        ← validate input
+│
+├── Exceptions        ← custom exception
+│
+└── Mappings          ← AutoMapper (optional)

@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\UrlShortenner.API\UrlShortenner.API.csproj" />
+    <Folder Include="Controller\" />
   </ItemGroup>
 
 </Project>
