@@ -1,27 +1,25 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿
 using System.Security.Cryptography;
 using System.Text;
 using UrlShortener.Application.Interfaces;
 using UrlShortener.Application.IRepositories;
 using UrlShortener.Domain.Entities;
-using System.Security.Cryptography;
 
 namespace UrlShortener.Application.Services
 {
 
-    public class UrlService 
+    public class UrlService
     {
         private readonly IUrlRepository _urlRepository;
         private readonly ICacheRepository _cacheRepository;
-
-        public UrlService(IUrlRepository urlRepository, ICacheRepository cache)
+        private readonly StrackingService _trackingService;
+        public UrlService(IUrlRepository urlRepository, ICacheRepository cache, StrackingService strackingService)
         {
+            _trackingService = strackingService;
             _urlRepository = urlRepository;
             _cacheRepository = cache;
         }
 
-       
         public async Task<string> CreateShortCodeAsync(string originalUrl, string ip)
         {
             // Kiểm tra tính hợp lệ cơ bản của url
@@ -52,7 +50,7 @@ namespace UrlShortener.Application.Services
             return shortCode;
         }
 
-         private const string Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        private const string Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
         public string GenerateRandomCode(long id)
         {
@@ -70,31 +68,74 @@ namespace UrlShortener.Application.Services
                 result[i] = Chars[bytes[i] % Chars.Length];
             }
 
-            return new string(result);
+            return new string(result) + id.ToString();
         }
-    public async Task<string?> GetOriginalUrlAsync(string code)
-            {
+
+        //  Click → Push event vào Stream (queue)
+        //→ Worker đọc queue
+        //→ Update DB
+        public async Task<string?> GetOriginalUrlAsync(string code, string ip)
+        {
             var cacheKey = $"url:{code}";
+            string? originalUrl = null;
 
             // 1. Check Redis trước
             var cachedUrl = await _cacheRepository.GetAsync(cacheKey);
             if (!string.IsNullOrEmpty(cachedUrl))
             {
-                return cachedUrl;
+                originalUrl = cachedUrl;
+            }
+            else
+            {
+                // 2. Nếu không có thì query DB
+                var urlEntity = await _urlRepository.GetByCodeAsync(code);
+
+                if (urlEntity != null)
+                {
+                    originalUrl = urlEntity.OriginalUrl;
+                    // 3. Lưu lại vào cache để lần sau đọc nhanh hơn + Set thêm bộ đếm vào Cache
+                    await _cacheRepository.SetAsync(cacheKey, originalUrl, TimeSpan.FromHours(1));
+
+                    // Thiết lập giá trị Count ban đầu cho Redis nếu chưa có
+                    await _cacheRepository.SetCountAsync($"click:{code}", urlEntity.CountClick);
+                }
             }
 
-            // 2. Nếu không có thì query DB
-            var urlEntity = await _urlRepository.GetByCodeAsync(code);
-
-            if (urlEntity == null)
+            // 4. Báo null nếu ko tìm thấy ở đâu
+            if (originalUrl == null)
+            {
                 return null;
+            }
 
-            // 3. Lưu lại vào Redis (cache)
-            await _cacheRepository.SetAsync(cacheKey, urlEntity.OriginalUrl, TimeSpan.FromHours(1));
+            // 5. Tracking: 
+            // - Tăng trực tiếp cache đếm lượt click 
+            await _cacheRepository.SetCountAsync($"click:{code}", (await GetClickCountAsync(code)) + 1);
 
-            return urlEntity.OriginalUrl;
+            // - Đẩy log xuống Redis Stream cho Background Service update vào SQL Async
+            // Việc đẩy là rất nhẹ nhàng
+            await _trackingService.PushClickEventAsync(code, ip);
+
+            return originalUrl;
         }
+
+      
+        public async Task<List<ShortUrl>> GetByIpAsync(string ip)
+        {
+            var urls = await _urlRepository.GetByIpAsync(ip);
+            return urls;
+        }
+
+        public async Task<long> GetClickCountAsync(string code)
+        {
+            var value = await _cacheRepository.GetCountAsync($"click:{code}");
+
+            return (long)value;
+        }
+
+
     }
-    
+
 }
+
+
 

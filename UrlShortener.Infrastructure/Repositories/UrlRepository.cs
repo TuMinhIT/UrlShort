@@ -28,7 +28,6 @@ namespace UrlShortener.Infrastructure.Repositories
                 Console.WriteLine($"Error adding URL: {ex.Message}");
                 throw; // Re-throw the exception after logging
             }
-           
         }
 
         public async Task<ShortUrl?> GetByCodeAsync(string code)
@@ -37,6 +36,31 @@ namespace UrlShortener.Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.ShortCode == code);
         }
 
+        public async Task<List<ShortUrl>> GetByIpAsync(string ip)
+        {
+            return await _context.ShortUrls
+              .Where(x => x.Ip == ip)
+              .ToListAsync();
+        }
+
+        public async Task IncrementClickCountAsync(string code, int increment)
+        {
+            try
+            {
+                var entity = await _context.ShortUrls.FirstOrDefaultAsync(x => x.ShortCode == code);
+                if (entity != null)
+                {
+                    entity.CountClick += increment;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error update URL: {ex.Message}");
+                throw;
+            }
+        }           
+                   
 
         public async Task UpdateAsync(ShortUrl url)
         {

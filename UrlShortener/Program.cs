@@ -44,8 +44,12 @@ namespace UrlShortener
 
             //Regiter services
             builder.Services.AddScoped<UrlService>();
+            builder.Services.AddScoped<StrackingService>();
             builder.Services.AddScoped<IUrlRepository, UrlRepository>();
             builder.Services.AddScoped<ICacheRepository, CacheRepository>();
+           
+
+            builder.Services.AddHostedService<ClickStreamConsumer>();
 
             //cấu hình db
             builder.Services.AddDbContext<AppDbContext>(options =>

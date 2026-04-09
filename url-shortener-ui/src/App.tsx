@@ -37,7 +37,7 @@ function App() {
       </section>
 
       <footer className="relative mx-auto mt-10 w-full max-w-6xl text-center text-sm text-slate-500">
-        Powered by Vite + React + Tailwind CSS v4
+        @copyrigth MinhTuIt 2026
       </footer>
     </main>
   );
