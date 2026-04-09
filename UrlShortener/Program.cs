@@ -24,6 +24,16 @@ namespace UrlShortener
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+            
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", builder =>
+                {
+                    builder.AllowAnyOrigin()
+                           .AllowAnyMethod()
+                           .AllowAnyHeader();
+                });
+            });
 
             // Cấu hình Controllers
             builder.Services.AddControllers();
@@ -53,7 +63,12 @@ namespace UrlShortener
 
             //cấu hình db
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    builder.Configuration.GetConnectionString("DefaultConnection"),
+                    sqlOptions => sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null)));
 
             builder.Services.AddRateLimiter(options =>
             {
@@ -73,6 +88,40 @@ namespace UrlShortener
 
             var app = builder.Build();
 
+                // Apply migrations on startup with retries so the API can self-initialize its DB.
+                using (var scope = app.Services.CreateScope())
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                    const int maxAttempts = 10;
+
+                    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+                    {
+                        try
+                        {
+                            dbContext.Database.Migrate();
+                            break;
+                        }
+                        catch (Exception ex) when (attempt < maxAttempts)
+                        {
+                            logger.LogWarning(
+                                ex,
+                                "Database is not ready yet (attempt {Attempt}/{MaxAttempts}). Retrying in 5 seconds...",
+                                attempt,
+                                maxAttempts);
+                            Thread.Sleep(TimeSpan.FromSeconds(5));
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to apply database migrations on startup.");
+                            throw;
+                        }
+                    }
+                }
+
+            // Sử dụng CORS 
+            app.UseCors("AllowAll");
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -84,6 +133,8 @@ namespace UrlShortener
             
             // Middleware log HTTP request/response
             app.UseHttpLogging();
+
+            app.UseCors("FrontendDev");
             
             // Sử dụng Rate Limiting Middleware trước Routing và Endpoints
             app.UseRateLimiter();
@@ -92,7 +143,7 @@ namespace UrlShortener
             
             //  QUAN TRỌNG: Map controllers để route hoạt động
             app.MapControllers();
-            app.MapGet("/", () => "🚀 API is running...");           
+            app.MapGet("/", () => " API is running...");           
             app.Run();           
         }
     }

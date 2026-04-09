@@ -25,13 +25,14 @@ namespace UrlShortener.Controller
         {
             try
             {
+                var ip = ResolveClientIp();
                 // Gọi Service thực thi logic nghiệp vụ và lấy mã trả về
-                var shortCode = await _urlService.CreateShortCodeAsync(request.OriginalUrl, request.Ip);
+                var shortCode = await _urlService.CreateShortCodeAsync(request.OriginalUrl, ip);
 
                 // Tầng API chỉ lo việc Build Request URI
                 var shortUrlStr = $"{Request.Scheme}://{Request.Host}/{shortCode}";
 
-                return Ok(new {Shortcode = shortCode, ShortUrl = shortUrlStr, OriginalUrl = request.OriginalUrl });
+                return Ok(new {ShortCode = shortCode, ShortUrl = shortUrlStr, OriginalUrl = request.OriginalUrl });
             }
             catch (ArgumentException ex) 
             {
@@ -84,11 +85,12 @@ namespace UrlShortener.Controller
             var ip = ResolveClientIp();
             if (string.IsNullOrWhiteSpace(ip))
             {
-                return BadRequest(new { Message = "Khong tim thay ip" });
+                return BadRequest(new {        
+                Message = "Khong tim thay ip" });
             }
-
+            
             var urls = await _urlService.GetByIpAsync(ip);
-            return Ok(urls);
+            return Ok(urls  );
         }
 
         private string? ResolveClientIp()

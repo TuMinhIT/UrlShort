@@ -1,119 +1,105 @@
 # UrlShort - URL Shortener
 
-Du an gom backend ASP.NET Core 8 (Clean Architecture) va frontend React + Vite.
+A full-stack project featuring a **ASP.NET Core 8** backend (Clean Architecture) and **React + TypeScript + Vite** frontend.
 
-## Kien truc thu muc
+## Project Structure
 
-- `UrlShortener/`: API host (controller, Program, appsettings)
-- `UrlShortener.Application/`: service, DTO, interface repository
-- `UrlShortener.Domain/`: entity domain
-- `UrlShortener.Infrastructure/`: EF Core DbContext, migration, repository SQL/Redis
-- `url-shortener-ui/`: giao dien React
-- `docker-compose.yml`: chay SQL Server, Redis, API bang Docker
+### Backend (.NET)
 
-## Tinh nang backend
+- `UrlShortener/` - API host (Controller, Program, appsettings)
+- `UrlShortener.Application/` - Services, DTOs, Repository interfaces
+- `UrlShortener.Domain/` - Domain entities
+- `UrlShortener.Infrastructure/` - EF Core DbContext, Migrations, SQL/Redis repositories
+- `docker-compose.yml` - Orchestration for SQL Server, Redis, API
 
-- Tao URL rut gon tu URL goc
-- Redirect theo ma rut gon
-- Theo doi click (cache Redis + stream event)
-- Lay tong so click theo ma
-- Lay danh sach URL theo IP tao URL
-- Gioi han tan suat API shorten (fixed window limiter)
+### Frontend (React)
 
-## Cong nghe
+- `url-shortener-ui/` - React UI with TypeScript + Vite
+
+## Backend Features
+
+- Generate shortened URLs from long URLs
+- Redirect to original URL by shortcode
+- Real-time click tracking (Redis cache + stream events)
+- Fetch total click count by shortcode
+- List URLs created by IP address
+- API rate limiting (Fixed Window Limiter: 10 req/min)
+- Auto-migration DB on startup
+- Retry logic on transient failures
+
+## Technology Stack
+
+**Backend:**
 
 - .NET 8, ASP.NET Core Web API
 - Entity Framework Core + SQL Server
-- Redis (cache + stream)
-- React + TypeScript + Vite
+- Redis (cache + stream events)
 - Docker Compose
 
-## Cac API chinh
+**Frontend:**
 
-Base URL local backend khi chay bang Docker: `http://localhost:5000`
+- React 18 + TypeScript
+- Vite (fast build tool)
+- Tailwind CSS / Custom CSS
+- Axios / Fetch API
 
-1. Tao URL rut gon
+---
 
-- Method: `POST`
-- Path: `/api/url/shorten`
-- Body:
+## Getting Started
 
-```json
-{
-  "originalUrl": "https://example.com/very-long-link",
-  "ip": "127.0.0.1"
-}
-```
+### Backend (Docker)
 
-- Response mau:
-
-```json
-{
-  "shortcode": "AbC123451",
-  "shortUrl": "http://localhost:5000/AbC123451",
-  "originalUrl": "https://example.com/very-long-link"
-}
-```
-
-2. Redirect URL goc
-
-- Method: `GET`
-- Path: `/{code}`
-- Vi du: `/AbC123451`
-
-3. Lay so click theo ma
-
-- Method: `GET`
-- Path: `/api/url/click/{code}`
-
-4. Lay danh sach URL theo IP client
-
-- Method: `GET`
-- Path: `/api/url/urls`
-- API uu tien lay IP tu header `X-Forwarded-For`, neu khong co se lay `RemoteIpAddress`.
-
-## Chay nhanh bang Docker (khuyen nghi)
-
-Yeu cau:
+**Requirements:**
 
 - Docker Desktop
 
-Lenh:
+**Step 1: Start backend + SQL Server + Redis**
 
 ```bash
 docker compose up --build
 ```
 
-Sau khi chay:
+After running:
 
 - API: `http://localhost:5000`
 - Swagger: `http://localhost:5000/swagger`
-- SQL Server host port: `1434`
-- Redis host port: `6379`
+- SQL Server (host): `localhost:1434`
+- Redis: `localhost:6379`
 
-Dung lai:
+**Stop:**
 
 ```bash
 docker compose down
 ```
 
-## Chay backend khong dung Docker
+---
 
-Yeu cau:
+### Frontend (npm)
 
-- .NET SDK 8
-- SQL Server va Redis dang chay local
+**Requirements:**
 
-Buoc:
+- Node.js 18+
+- npm
 
-1. Chinh connection string trong `UrlShortener/appsettings.json` neu can.
-2. Tu thu muc goc du an, chay:
+**Step 1: Install dependencies**
 
 ```bash
-dotnet run --project UrlShortener/UrlShortener.csproj
+cd url-shortener-ui
+npm install
 ```
 
-## Ghi chu
+**Step 2: Run dev server**
 
-- Du an dang co migration trong `UrlShortener.Infrastructure/Migrations`.
-- API shorten dang duoc limit 10 request/phut cho moi instance app.
+```bash
+npm run dev
+```
+
+Frontend will run at: `http://localhost:5173` (Vite default port)
+
+## Notes
+
+- Database migrations run automatically on API startup
+- SQL Server retry logic: 5 attempts, max delay 10s
+- Rate limiter: 10 requests/minute per instance
+- CORS enabled for local frontend development
+- Swagger UI available for API testing
